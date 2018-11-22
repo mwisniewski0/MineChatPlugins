@@ -27,6 +27,7 @@ class LogLine:
 
     @staticmethod
     def parse_log_line(line: str, read_on: datetime.datetime):
+        print(line)
         # Logs are in the form [HH:MM:SS] [<category>]: <content>. Time is in military format.
         time_string = ''
         category_string = ''

@@ -19,7 +19,7 @@ class _StdoutReader:
         self.stdin = stdout
         self.loop = loop
 
-    async def readline(self) -> str:
+    async def readline(self):
         # a single call to sys.stdin.readline() is thread-safe
         return await self.loop.run_in_executor(None, self.stdin.readline)
 
@@ -29,13 +29,18 @@ class StdoutMonitor(LogMonitor):
         self._pipe = _StdoutReader(stdout_pipe)
 
         # Remainder from last read, if it did not include a full line
-        self._last_line = ''
+        self._last_line = b''
 
     async def get_new_log_lines(self) -> List[LogLine]:
         line = await self._pipe.readline()
-        if line.endswith('\n'):
-            result = self._last_line + line[:-1]
-            self._last_line = ''
+        if line.endswith(b'\n'):
+            result = (self._last_line + line[:-1]).decode()
+
+            # Fixing messy line ends on Windows
+            if result[-1] == '\r':
+                result = result[:-1]
+
+            self._last_line = b''
             return [LogLine.parse_log_line(result, datetime.utcnow())]
         else:
             self._last_line += line

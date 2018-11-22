@@ -23,19 +23,31 @@ class Plugin(abc.ABC):
         raise NotImplementedError()
 
 
-def load_plugins(plugins_path: str, command_sink: ServerCommandExecutor) -> Dict[str, Plugin]:
-    sys.path.insert(0, plugins_path)
+plugin_classes = {}
 
-    loaded_plugins = {}
+
+def register_plugin(plugin_class, name=None):
+    if name is None:
+        name = plugin_class.__name__
+    if name in plugin_classes:
+        raise ValueError('Plugin ' + name + ' already exists')
+    else:
+        plugin_classes[name] = plugin_class
+
+    return plugin_class
+
+
+def load_plugins(plugins_path: str, command_sink: ServerCommandExecutor) -> Dict[str, Plugin]:
+    global loaded_plugins
+    sys.path.insert(0, plugins_path)
 
     pkgutil.iter_modules(plugins_path)
     for importer, modname, ispkg in pkgutil.iter_modules([plugins_path]):
+        print(importer, modname, ispkg)
         if ispkg:
             continue
-        module = importlib.import_module(modname)
-        for name, item in module.__dict__.items():
-            if isinstance(item, type) and issubclass(item, Plugin):
-                plugin = item
-                loaded_plugins[name] = plugin.create(command_sink)
+        importlib.import_module(modname)
 
-    return loaded_plugins
+    return {
+        name: plugin_class.create(command_sink) for name, plugin_class in plugin_classes.items()
+    }

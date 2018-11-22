@@ -1,4 +1,5 @@
 import asyncio
+import atexit
 import re
 import subprocess
 from typing import Dict
@@ -14,11 +15,11 @@ from rcon import RconConnection
 
 async def program_loop(plugins: Dict[str, plugins_loader.Plugin],
                        log_source: monitoring.LogMonitor):
-    await asyncio.wait(plugin.on_load(plugins) for plugin in plugins.values())
+    await asyncio.wait([plugin.on_load(plugins) for plugin in plugins.values()])
     while True:
         lines = await log_source.get_new_log_lines()
         for line in lines:
-            await asyncio.wait(plugin.handle_line(line) for plugin in plugins.values())
+            await asyncio.wait([plugin.handle_line(line) for plugin in plugins.values()])
 
 
 async def program():
@@ -36,6 +37,7 @@ async def program():
             subprocess.PIPE if CONFIG['log_source'] == 'subprocess' else subprocess.DEVNULL
         server_process = subprocess.Popen(CONFIG['server_start_command'], shell=True,
                                           stdin=stdin_pipe_setting, stdout=stdout_pipe_setting)
+        atexit.register(lambda: server_process.kill())
 
     command_sink = None
     log_source = None
