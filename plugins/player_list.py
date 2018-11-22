@@ -2,7 +2,7 @@ import difflib
 from typing import Dict
 
 from commands import ServerCommandExecutor
-from log_lines import LogLine, PlayerJoinedLine, PlayerMessageLine
+from log_lines import LogLine, PlayerJoinedLine, PlayerMessageLine, PlayerLeftLine
 from plugins import Plugin, register_plugin
 
 DEBUG = True
@@ -27,7 +27,7 @@ class PlayerListPlugin(Plugin):
             self.players = set()
         elif isinstance(line, PlayerJoinedLine):
             self.players.add(line.player_name)
-        elif isinstance(line, PlayerJoinedLine):
+        elif isinstance(line, PlayerLeftLine):
             self.players.remove(line.player_name)
         elif isinstance(line, PlayerMessageLine):
             print(line.player_name, line.message_text)
