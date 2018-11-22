@@ -1,6 +1,7 @@
 import abc
 import importlib
 import pkgutil
+import sys
 from typing import Dict
 
 from commands import ServerCommandExecutor
@@ -23,10 +24,12 @@ class Plugin(abc.ABC):
 
 
 def load_plugins(plugins_path: str, command_sink: ServerCommandExecutor) -> Dict[str, Plugin]:
+    sys.path.insert(0, plugins_path)
+
     loaded_plugins = {}
 
     pkgutil.iter_modules(plugins_path)
-    for importer, modname, ispkg in pkgutil.iter_modules(plugins_path):
+    for importer, modname, ispkg in pkgutil.iter_modules([plugins_path]):
         if ispkg:
             continue
         module = importlib.import_module(modname)
