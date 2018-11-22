@@ -24,6 +24,7 @@ class PlayerListPlugin(Plugin):
     async def handle_line(self, line: LogLine):
         print(repr(line))
         if line.content.startswith('Starting minecraft server'):
+            print('resetting player list')
             self.players = set()
         elif isinstance(line, PlayerJoinedLine):
             self.players.add(line.player_name)
