@@ -25,7 +25,8 @@ class _StdoutReader:
 
 
 class StdoutMonitor(LogMonitor):
-    def __init__(self, stdout_pipe):
+    def __init__(self, stdout_pipe, passthrough=True):
+        self._passthrough = passthrough
         self._pipe = _StdoutReader(stdout_pipe)
 
         # Remainder from last read, if it did not include a full line
@@ -33,6 +34,8 @@ class StdoutMonitor(LogMonitor):
 
     async def get_new_log_lines(self) -> List[LogLine]:
         line = await self._pipe.readline()
+        if self._passthrough:
+            print(line)
         if line.endswith(b'\n'):
             result = (self._last_line + line[:-1]).decode()
 

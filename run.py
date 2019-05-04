@@ -4,6 +4,7 @@ import re
 import subprocess
 import traceback
 from typing import Dict
+import sys
 
 import monitoring
 import plugins as plugins_loader
@@ -21,12 +22,13 @@ async def program_loop(plugins: Dict[str, plugins_loader.Plugin],
         await asyncio.gather(*[plugin.on_load(plugins) for plugin in sorted_plugins])
     except Exception as e:
         traceback.print_exc()
-        exit(1)
+        return
 
     while True:
         try:
             lines = await log_source.get_new_log_lines()
             for line in lines:
+                print(line.content)
                 await asyncio.gather(*[plugin.handle_line(line) for plugin in sorted_plugins])
         except Exception as e:
             traceback.print_exc()
