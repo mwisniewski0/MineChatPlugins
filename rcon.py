@@ -1,6 +1,7 @@
 import asyncio
 import struct
 import traceback
+from collections import deque
 from typing import Optional
 
 from commands import ServerCommandExecutor
@@ -9,7 +10,7 @@ LOGIN_TYPE = 3
 COMMAND_TYPE = 2
 RESPONSE_TYPE = 0
 
-DELIMITER_REQUEST_ID = -1024
+DELIMITER_REQUEST_ID = 2
 
 
 class Packet:
@@ -31,10 +32,9 @@ class Packet:
 
     @staticmethod
     async def read_from_reader(reader: asyncio.StreamReader) -> 'Packet':
-        length, request_id, packet_type = struct.unpack('<iii', await reader.readexactly(4))[0]
+        length, request_id, packet_type = struct.unpack('<iii', await reader.readexactly(12))
         payload = await reader.readexactly(length - 4 - 4 - 2)
         await reader.readexactly(2)  # Remove padding from the stream
-
         return Packet(request_id, packet_type, payload)
 
 
@@ -42,8 +42,10 @@ class RconConnection(ServerCommandExecutor):
     def __init__(self):
         self._reader: Optional[asyncio.StreamReader] = None
         self._writer: Optional[asyncio.StreamWriter] = None
-        self._current_request_id = 1
+        self._current_request_id = 10
 
+        self._packet_queue = deque()
+        self._wait_for_packets = asyncio.get_event_loop().create_future()
         self._response_futures = {}
 
     async def connect(self, port: int, password: str):
@@ -62,39 +64,38 @@ class RconConnection(ServerCommandExecutor):
         if login_response.request_id == -1:
             raise ConnectionRefusedError('Password was incorrect')
 
-    async def _read_from_server_loop(self):
+    async def server_communication_loop(self):
         try:
-            request_id = None
-            response_payload = b''
             while True:
-                packet = await Packet.read_from_reader(self._reader)
-                if packet.request_id == DELIMITER_REQUEST_ID:
-                    self._response_futures[request_id].set_result(response_payload)
-                    response_payload = b''
-                    request_id = None
-                else:
-                    request_id = packet.request_id
-                    response_payload += packet.payload
+                while self._packet_queue:
+                    packet, future = self._packet_queue.pop()
+
+                    await asyncio.sleep(0.01)
+                    self._writer.write(packet.encode())
+                    await self._writer.drain()
+                    await asyncio.sleep(0.01)
+
+                    # Currently, minecraft is only capable of sending one response packet for each
+                    # request. Therefore, the code below works
+                    response = await Packet.read_from_reader(self._reader)
+                    future.set_result(response.payload)
+
+                await self._wait_for_packets
+                self._wait_for_packets = asyncio.get_event_loop().create_future()
         except Exception:
             traceback.print_exc()
-            raise
+            exit(1)
 
     async def send_command(self, command: str) -> str:
         packet = Packet(self._current_request_id, COMMAND_TYPE, command.encode())
+        future = asyncio.get_event_loop().create_future()
+        self._packet_queue.appendleft((packet, future))
+
         self._prepare_next_id()
 
-        future = asyncio.get_event_loop().create_future()
-        self._response_futures[packet.request_id] = future
-
-        self._writer.write(packet.encode())
-
-        # Fix for: https://developer.valvesoftware.com/wiki/Source_RCON_Protocol#Multiple-packet_Responses
-        # We are writing an incorrect message to delimit responses from the server.
-        self._writer.write(Packet(DELIMITER_REQUEST_ID, RESPONSE_TYPE, b'').encode())
-
-        await self._writer.drain()
-
-        return await future
+        if not self._wait_for_packets.done():
+            self._wait_for_packets.set_result(True)
+        await future
 
     def _prepare_next_id(self):
         # Python can store arbitrary large integers, but the protocol expects 32 bits per int.

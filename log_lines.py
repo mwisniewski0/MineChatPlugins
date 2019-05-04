@@ -1,6 +1,9 @@
 import datetime
 import re
 
+import pytz
+from tzlocal import get_localzone
+
 
 class LogLine:
     def __init__(self, timestamp: datetime.datetime, category: str, content: str):
@@ -10,7 +13,9 @@ class LogLine:
 
     @staticmethod
     def _deduce_timestamp(time: datetime.datetime, read_on: datetime.datetime):
-        current_day = time.replace(year=read_on.year, month=read_on.month, day=read_on.day)
+        read_on_local = read_on.astimezone(get_localzone())
+        current_day = time.replace(year=read_on_local.year, month=read_on_local.month,
+                                   day=read_on_local.day)
         day_before = current_day - datetime.timedelta(days=1)
         day_after = current_day + datetime.timedelta(days=1)
 
@@ -19,15 +24,14 @@ class LogLine:
         best_candidate = None
         best_candidate_diff = datetime.timedelta.max
         for candidate in candidates:
-            diff = abs(read_on - candidate)
+            diff = abs(read_on_local - candidate)
             if best_candidate_diff >= diff:
                 best_candidate = candidate
                 best_candidate_diff = diff
-        return best_candidate
+        return best_candidate.astimezone(pytz.utc)
 
     @staticmethod
     def parse_log_line(line: str, read_on: datetime.datetime):
-        print(line)
         # Logs are in the form [HH:MM:SS] [<category>]: <content>. Time is in military format.
         time_string = ''
         category_string = ''
@@ -63,10 +67,15 @@ class LogLine:
         if state != 'content':
             raise ValueError('The line ' + line + ' does not have the required, 3-part format')
 
-        timestamp = LogLine._deduce_timestamp(datetime.datetime.strptime(time_string, '%H:%M:%S'),
+        timestamp = LogLine._deduce_timestamp(LogLine.parse_time_string(time_string),
                                               read_on)
 
         return LogLine(timestamp, category_string, content_string)._specialized()
+
+    @staticmethod
+    def parse_time_string(time_string):
+        return get_localzone().localize(datetime.datetime.strptime(time_string, '%H:%M:%S'),
+                                        is_dst=None)
 
     def _specialized(self):
         if self.category == 'Server thread/INFO':

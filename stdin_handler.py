@@ -8,7 +8,6 @@ class StdinHandler(ServerCommandExecutor):
         self.stdin_pipe = stdin_pipe
 
     async def send_command(self, command: str) -> str:
-        print('writing command: ', b'/' + command.encode())
         self.stdin_pipe.write(b'/' + command.encode() + os.linesep.encode())
         self.stdin_pipe.flush()
         return ''  # not available using the StdinHandler

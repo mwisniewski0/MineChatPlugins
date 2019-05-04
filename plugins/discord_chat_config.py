@@ -1,0 +1,4 @@
+DISCORD_CONFIG = {
+    'token': 'NTczODkxMDEyNjI0MjUyOTI4.XMx1PQ.XB6t6ASm2oPrcBFE1Q5H7pQjky4',
+    'channel_id': 573894904934170635,
+}
