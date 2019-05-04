@@ -18,7 +18,6 @@ class StdinHandler(ServerCommandExecutor):
             thread = threading.Thread(target=stdin_thread)
             thread.start()
 
-
     def _passthrough_loop(self):
         lines = sys.stdin.readlines()
 

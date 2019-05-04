@@ -35,7 +35,7 @@ class StdoutMonitor(LogMonitor):
     async def get_new_log_lines(self) -> List[LogLine]:
         line = await self._pipe.readline()
         if self._passthrough:
-            print(line)
+            print(line.decode())
         if line.endswith(b'\n'):
             result = (self._last_line + line[:-1]).decode()
 

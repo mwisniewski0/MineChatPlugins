@@ -28,7 +28,6 @@ async def program_loop(plugins: Dict[str, plugins_loader.Plugin],
         try:
             lines = await log_source.get_new_log_lines()
             for line in lines:
-                print(line.content)
                 await asyncio.gather(*[plugin.handle_line(line) for plugin in sorted_plugins])
         except Exception as e:
             traceback.print_exc()
