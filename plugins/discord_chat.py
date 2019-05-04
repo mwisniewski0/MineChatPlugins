@@ -7,7 +7,7 @@ from typing import Dict
 from commands import ServerCommandExecutor
 from log_lines import LogLine, PlayerJoinedLine, PlayerMessageLine, PlayerLeftLine
 from plugins import Plugin, register_plugin
-from plugins.discord_chat_config import DISCORD_CONFIG
+from discord_chat_config import DISCORD_CONFIG
 from utils import fire_and_forget
 
 
@@ -22,13 +22,10 @@ class DiscordChat(Plugin):
 
         @self.client.event
         async def on_ready():
-            print("The bot is ready!")
-            #await self.client.change_presence(game=discord.Game(name="Making a    bot"))
             self.channel = self.client.get_channel(self.channel_id)
 
         @self.client.event
         async def on_message(message):
-            print('lala')
             if message.channel.id != self.channel_id:
                 return
 

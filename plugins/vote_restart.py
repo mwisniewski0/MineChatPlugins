@@ -40,15 +40,14 @@ class VoteRestartPlugin(Plugin):
                 self.votes[line.player_name] = (True, line.timestamp)
                 await self.restart_if_votes_allow()
                 asyncio.ensure_future(self.try_after_vote_expired())
+                await self.print_status()
             elif line.message_text == '$vote_no_restart':
                 await self.restart_if_votes_allow()
                 self.votes[line.player_name] = (False, line.timestamp)
                 asyncio.ensure_future(self.try_after_vote_expired())
+                await self.print_status()
             elif line.message_text == '$status_vote_restart':
-                yes, no = self.count_yes_no_votes()
-                await self.command_sink.server_say(
-                    'Currently ' + str(yes) + ' votes for "yes" and ' +
-                    str(no) + ' votes for "no".')
+                await self.print_status()
         elif line.content.startswith('Starting minecraft server'):
             self.players = set()
         elif isinstance(line, PlayerJoinedLine):
@@ -57,6 +56,12 @@ class VoteRestartPlugin(Plugin):
         elif isinstance(line, PlayerLeftLine):
             self.players.remove(line.player_name)
             await self.restart_if_votes_allow()
+
+    async def print_status(self):
+        yes, no = self.count_yes_no_votes()
+        await self.command_sink.server_say(
+            'Currently ' + str(yes) + ' votes for "yes" and ' +
+            str(no) + ' votes for "no".')
 
     def count_yes_no_votes(self):
         now = datetime.now(pytz.utc)
