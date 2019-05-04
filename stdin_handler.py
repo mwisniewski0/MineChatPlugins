@@ -14,7 +14,7 @@ class StdinHandler(ServerCommandExecutor):
             def stdin_thread():
                 while True:
                     line = sys.stdin.readline()
-                    self.stdin_pipe.write(line)
+                    self.stdin_pipe.write(line.encode())
             thread = threading.Thread(target=stdin_thread)
             thread.start()
 
