@@ -15,7 +15,9 @@ class StdinHandler(ServerCommandExecutor):
                 while True:
                     line = sys.stdin.readline()
                     self.stdin_pipe.write(line.encode())
+                    self.stdin_pipe.flush()
             thread = threading.Thread(target=stdin_thread)
+            thread.setDaemon(True)
             thread.start()
 
     def _passthrough_loop(self):

@@ -20,6 +20,8 @@ async def program_loop(plugins: Dict[str, plugins_loader.Plugin],
     sorted_plugins = plugins_loader.sort_plugins_topologically(plugins)
     try:
         await asyncio.gather(*[plugin.on_load(plugins) for plugin in sorted_plugins])
+    except SystemExit as e:
+        raise
     except Exception as e:
         traceback.print_exc()
         return
@@ -29,6 +31,8 @@ async def program_loop(plugins: Dict[str, plugins_loader.Plugin],
             lines = await log_source.get_new_log_lines()
             for line in lines:
                 await asyncio.gather(*[plugin.handle_line(line) for plugin in sorted_plugins])
+        except SystemExit as e:
+            raise
         except Exception as e:
             traceback.print_exc()
 

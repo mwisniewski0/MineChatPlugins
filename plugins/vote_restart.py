@@ -79,6 +79,7 @@ class VoteRestartPlugin(Plugin):
     async def restart(self):
         self.votes = {}
         await self.command_sink.server_say('Restarting...')
+        exit(1)
 
     async def restart_if_votes_allow(self):
         yes, no = self.count_yes_no_votes()
