@@ -11,14 +11,11 @@ class StdinHandler(ServerCommandExecutor):
         self.stdin_pipe = stdin_pipe
 
         if passthrough:
-            def stdin_thread():
-                while True:
-                    line = sys.stdin.readline()
-                    self.stdin_pipe.write(line.encode())
-                    self.stdin_pipe.flush()
-            thread = threading.Thread(target=stdin_thread)
-            thread.setDaemon(True)
-            thread.start()
+            def on_stdin_read():
+                line = sys.stdin.readline()
+                self.stdin_pipe.write(line.encode())
+                self.stdin_pipe.flush()
+            asyncio.get_event_loop().add_reader(sys.stdin, on_stdin_read)
 
     def _passthrough_loop(self):
         lines = sys.stdin.readlines()
