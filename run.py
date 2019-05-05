@@ -1,6 +1,7 @@
 import asyncio
 import atexit
 import re
+import shlex
 import subprocess
 import traceback
 from typing import Dict
@@ -36,6 +37,7 @@ async def program_loop(plugins: Dict[str, plugins_loader.Plugin],
         except Exception as e:
             traceback.print_exc()
 
+
 async def program():
     if CONFIG['server_start_command'] is None and \
             (CONFIG['command_sink'] == 'subprocess' or CONFIG['log_source'] == 'subprocess'):
@@ -49,11 +51,12 @@ async def program():
             subprocess.PIPE if CONFIG['command_sink'] == 'subprocess' else subprocess.DEVNULL
         stdout_pipe_setting = \
             subprocess.PIPE if CONFIG['log_source'] == 'subprocess' else subprocess.DEVNULL
-        server_process = subprocess.Popen(CONFIG['server_start_command'], shell=True,
+        server_process = subprocess.Popen(shlex.split(CONFIG['server_start_command']), shell=False,
                                           stdin=stdin_pipe_setting, stdout=stdout_pipe_setting)
         # Let Minecraft start
         await asyncio.sleep(CONFIG['minecraft_wait_timeout'])
-        atexit.register(lambda: server_process.kill())
+        atexit.register(
+            lambda: server_process.kill())
 
     command_sink = None
     log_source = None
