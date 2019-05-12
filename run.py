@@ -3,6 +3,7 @@ import atexit
 import re
 import shlex
 import subprocess
+import threading
 import traceback
 from typing import Dict
 import sys
@@ -14,6 +15,9 @@ from commands import ServerCommandExecutor
 
 from config import CONFIG
 from rcon import RconConnection
+
+
+SERVER_POLL_INTERVAL = 20.0
 
 
 async def program_loop(plugins: Dict[str, plugins_loader.Plugin],
@@ -53,6 +57,25 @@ async def program():
             subprocess.PIPE if CONFIG['log_source'] == 'subprocess' else subprocess.DEVNULL
         server_process = subprocess.Popen(shlex.split(CONFIG['server_start_command']), shell=False,
                                           stdin=stdin_pipe_setting, stdout=stdout_pipe_setting)
+
+        # We need to kill this process if the server dies
+        async def kill_main_thread_coro():
+            exit(1)
+
+        asyncio_loop = asyncio.get_event_loop()
+        def monitor_subprocess():
+            while True:
+                try:
+                    server_process.wait(SERVER_POLL_INTERVAL)
+                    asyncio.run_coroutine_threadsafe(kill_main_thread_coro(), asyncio_loop)
+                    break
+                except subprocess.TimeoutExpired:
+                    pass
+
+        monitor_thread = threading.Thread(target=monitor_subprocess)
+        monitor_thread.setDaemon(True)
+        monitor_thread.start()
+
         # Let Minecraft start
         await asyncio.sleep(CONFIG['minecraft_wait_timeout'])
         atexit.register(
